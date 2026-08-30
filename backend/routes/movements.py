@@ -1,20 +1,40 @@
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required
+from flask import Blueprint, request, jsonify, abort
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
-from models import Product, StockMovement
+from models import Product, StockMovement, Warehouse
 
 movements_bp = Blueprint('movements', __name__)
 
 
-# Liste des mouvements (tous ou par produit)
+def _get_owned_product_or_404(product_id, user_id):
+    """Vérifie que le produit appartient à un entrepôt du user connecté."""
+    product = Product.query.join(Warehouse).filter(
+        Product.id == product_id, Warehouse.user_id == user_id
+    ).first()
+    if not product:
+        abort(404)
+    return product
+
+
+def _get_owned_movement_or_404(movement_id, user_id):
+    movement = StockMovement.query.join(Product).join(Warehouse).filter(
+        StockMovement.id == movement_id, Warehouse.user_id == user_id
+    ).first()
+    if not movement:
+        abort(404)
+    return movement
+
+
+# Liste des mouvements (tous ou par produit) — restreints aux entrepôts du user
 @movements_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_movements():
+    user_id = get_jwt_identity()
     product_id = request.args.get('product_id', type=int)
 
-    query = StockMovement.query
+    query = StockMovement.query.join(Product).join(Warehouse).filter(Warehouse.user_id == user_id)
     if product_id:
-        query = query.filter_by(product_id=product_id)
+        query = query.filter(StockMovement.product_id == product_id)
 
     movements = query.order_by(StockMovement.date.desc()).limit(50).all()
 
@@ -28,6 +48,7 @@ def get_movements():
 @movements_bp.route('/', methods=['POST'])
 @jwt_required()
 def add_movement():
+    user_id = get_jwt_identity()
     data = request.get_json()
 
     if not data or not data.get('product_id') or not data.get('quantity') or not data.get('movement_type'):
@@ -36,7 +57,7 @@ def add_movement():
     if data['movement_type'] not in ['entree', 'sortie']:
         return jsonify({'success': False, 'message': 'movement_type doit être entree ou sortie'}), 400
 
-    product = Product.query.get_or_404(data['product_id'])
+    product = _get_owned_product_or_404(data['product_id'], user_id)
 
     # Mise à jour de la quantité du produit
     if data['movement_type'] == 'entree':
@@ -70,7 +91,8 @@ def add_movement():
 @movements_bp.route('/<int:movement_id>', methods=['DELETE'])
 @jwt_required()
 def delete_movement(movement_id):
-    movement = StockMovement.query.get_or_404(movement_id)
+    user_id = get_jwt_identity()
+    movement = _get_owned_movement_or_404(movement_id, user_id)
 
     # On remet la quantité du produit à son état avant le mouvement
     product = Product.query.get(movement.product_id)
