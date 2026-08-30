@@ -44,9 +44,9 @@ export const importProductsCSV = (file, warehouseId) => {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('warehouse_id', warehouseId)
-  return API.post('/products/import', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  // l'en-tête multipart/form-data avec le "boundary", sinon Flask ne peut
+  // pas découper les parties du fichier envoyé.
+  return API.post('/products/import', formData)
 }
 
 // ENTREPOTS
