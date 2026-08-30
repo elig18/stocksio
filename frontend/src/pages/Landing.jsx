@@ -583,7 +583,7 @@ function Landing() {
               <span className="inline-flex gap-px">
                 <StarIcon /><StarIcon /><StarIcon /><StarIcon /><StarIcon />
               </span>
-              4,9/5 · +100 avis
+              4,9/5 · +1000 avis
             </span>
             <h1 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700 }} className="mt-5 text-[clamp(30px,5.2vw,44px)] leading-[1.12] max-w-[520px]">
               La gestion de stock, enfin simple pour les PME
