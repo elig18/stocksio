@@ -155,3 +155,74 @@ def export_csv():
         mimetype='text/csv',
         headers={'Content-Disposition': 'attachment; filename=stocks.csv'}
     )
+
+    # Import CSV (ajout de plusieurs produits en une fois)
+@products_bp.route('/import', methods=['POST'])
+@jwt_required()
+def import_csv():
+    user_id = get_jwt_identity()
+
+    warehouse_id = request.form.get('warehouse_id', type=int)
+    if not warehouse_id:
+        return jsonify({'success': False, 'message': 'Entrepôt requis'}), 400
+
+    warehouse = Warehouse.query.filter_by(id=warehouse_id, user_id=user_id).first()
+    if not warehouse:
+        return jsonify({'success': False, 'message': 'Entrepôt introuvable'}), 404
+
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'message': 'Aucun fichier reçu'}), 400
+
+    file = request.files['file']
+    if not file.filename.lower().endswith('.csv'):
+        return jsonify({'success': False, 'message': 'Le fichier doit être au format .csv'}), 400
+
+    try:
+        content = file.stream.read().decode('utf-8-sig')
+    except UnicodeDecodeError:
+        return jsonify({'success': False, 'message': "Impossible de lire le fichier (encodage attendu : UTF-8)"}), 400
+
+    reader = csv.DictReader(io.StringIO(content))
+
+    required_columns = {'Nom'}
+    if not reader.fieldnames or not required_columns.issubset(set(reader.fieldnames)):
+        return jsonify({
+            'success': False,
+            'message': "En-têtes attendues manquantes. Colonnes minimales : Nom (optionnelles : Référence, Catégorie, Quantité, Seuil alerte, Unité)"
+        }), 400
+
+    created = []
+    errors = []
+
+    for i, row in enumerate(reader, start=2):
+        name = (row.get('Nom') or '').strip()
+        if not name:
+            errors.append(f"Ligne {i} : nom manquant, ignorée")
+            continue
+
+        def _to_int(value, default):
+            try:
+                return int(str(value).strip())
+            except (TypeError, ValueError):
+                return default
+
+        product = Product(
+            name=name,
+            reference=(row.get('Référence') or '').strip() or None,
+            category=(row.get('Catégorie') or '').strip() or None,
+            quantity=_to_int(row.get('Quantité'), 0),
+            alert_threshold=_to_int(row.get('Seuil alerte'), 5),
+            unit=(row.get('Unité') or '').strip() or 'unité',
+            warehouse_id=warehouse_id,
+        )
+        db.session.add(product)
+        created.append(product)
+
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': f"{len(created)} produit(s) importé(s)" + (f", {len(errors)} ligne(s) ignorée(s)" if errors else ''),
+        'data': [p.to_dict() for p in created],
+        'errors': errors,
+    }), 201

@@ -40,6 +40,14 @@ export const createProduct = (data) => API.post('/products/', data)
 export const updateProduct = (id, data) => API.put(`/products/${id}`, data)
 export const deleteProduct = (id) => API.delete(`/products/${id}`)
 export const exportCSV = () => API.get('/products/export', { responseType: 'blob' })
+export const importProductsCSV = (file, warehouseId) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('warehouse_id', warehouseId)
+  return API.post('/products/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
 
 // ENTREPOTS
 export const getWarehouses = () => API.get('/warehouses/')

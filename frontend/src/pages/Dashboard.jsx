@@ -8,7 +8,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js'
-import { getDashboardStats } from '../services/api'
+import { getDashboardStats, getWarehouses, importProductsCSV } from '../services/api'
 import AlertBanner from '../components/AlertBanner'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
@@ -22,16 +22,125 @@ function KpiCard({ label, value, accent }) {
   )
 }
 
+function CsvImportCard({ onImported }) {
+  const [warehouses, setWarehouses] = useState([])
+  const [warehouseId, setWarehouseId] = useState('')
+  const [file, setFile] = useState(null)
+  const [importing, setImporting] = useState(false)
+  const [feedback, setFeedback] = useState(null) // { type: 'success' | 'error', message }
+
+  useEffect(() => {
+    getWarehouses()
+      .then((res) => {
+        const list = res.data.data
+        setWarehouses(list)
+        if (list.length > 0) setWarehouseId(String(list[0].id))
+      })
+      .catch(() => {})
+  }, [])
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!file || !warehouseId) return
+
+    setImporting(true)
+    setFeedback(null)
+    try {
+      const res = await importProductsCSV(file, warehouseId)
+      setFeedback({ type: 'success', message: res.data.message })
+      setFile(null)
+      e.target.reset()
+      onImported?.()
+    } catch (err) {
+      setFeedback({
+        type: 'error',
+        message: err.response?.data?.message || "Échec de l'import du fichier.",
+      })
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-mid/20 p-5 mb-8">
+      <h2 className="text-lg font-semibold text-navy mb-1">Importer des produits (CSV)</h2>
+      <p className="text-gray-mid text-sm mb-4">
+        Colonnes attendues : Nom (obligatoire), Référence, Catégorie, Quantité, Seuil alerte, Unité.
+      </p>
+
+      {warehouses.length === 0 ? (
+        <p className="text-gray-mid text-sm">
+          Crée d'abord un entrepôt pour pouvoir importer des produits.
+        </p>
+      ) : (
+        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row sm:items-end gap-3">
+          <div className="flex-1">
+            <label htmlFor="import-warehouse" className="block text-sm font-medium text-navy mb-1">
+              Entrepôt de destination
+            </label>
+            <select
+              id="import-warehouse"
+              value={warehouseId}
+              onChange={(e) => setWarehouseId(e.target.value)}
+              className="w-full rounded-md border border-gray-mid/30 px-3 py-2 text-sm"
+            >
+              {warehouses.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex-1">
+            <label htmlFor="import-file" className="block text-sm font-medium text-navy mb-1">
+              Fichier CSV
+            </label>
+            <input
+              id="import-file"
+              type="file"
+              accept=".csv"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="w-full text-sm text-gray-mid file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:bg-navy file:text-offwhite file:text-sm file:cursor-pointer"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={!file || importing}
+            className="px-4 py-2 rounded-md text-sm font-medium bg-teal text-navy hover:bg-teal-dark disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+          >
+            {importing ? 'Import…' : 'Importer'}
+          </button>
+        </form>
+      )}
+
+      {feedback && (
+        <p
+          role="status"
+          className={`mt-3 text-sm ${feedback.type === 'success' ? 'text-teal-dark' : 'text-red-600'}`}
+        >
+          {feedback.message}
+        </p>
+      )}
+    </div>
+  )
+}
+
 function Dashboard() {
   const [stats, setStats] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const loadStats = () => {
     getDashboardStats()
       .then((res) => setStats(res.data.data))
       .catch(() => setError("Impossible de charger les statistiques du dashboard."))
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    loadStats()
   }, [])
 
   if (loading) {
@@ -73,6 +182,8 @@ function Dashboard() {
       <h1 className="text-2xl font-bold text-navy mb-6">Dashboard</h1>
 
       <AlertBanner alerts={stats.products_in_alert} />
+
+      <CsvImportCard onImported={loadStats} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <KpiCard label="Produits" value={stats.total_products} />
