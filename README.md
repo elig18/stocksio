@@ -3,9 +3,16 @@
 Application web SaaS de gestion de stock pour PME, développée pour Jusdeliens
 dans le cadre du projet annuel Bachelor 3 « Chef de projet Web » (RNCP40857).
 
+**Site en ligne : [https://stocksio-pi.vercel.app/](https://stocksio-pi.vercel.app/)**
+
 - **Frontend** : React 19 + Vite + Tailwind CSS (dossier `frontend/`)
 - **Backend** : Python / Flask + SQLAlchemy + JWT (dossier `backend/`)
 - **Base de données** : SQLite en local, PostgreSQL recommandé en production
+
+Le backend étant hébergé sur le plan gratuit de Render, il se met en veille
+après 15 minutes d'inactivité : le premier chargement du site après une
+période sans visite peut prendre 20 à 30 secondes le temps que le serveur
+redémarre (voir la section Déploiement plus bas).
 
 ## Prérequis
 
@@ -13,7 +20,7 @@ dans le cadre du projet annuel Bachelor 3 « Chef de projet Web » (RNCP40857).
 - Python 3.10 ou supérieur, avec pip
 - un environnement virtuel Python (`venv`)
 
-## Installation :Backend
+## Installation : Backend
 
 ```bash
 cd backend
@@ -39,7 +46,7 @@ avec adaptation mineure de la syntaxe selon le moteur).
 ```bash
 cd frontend
 npm install
-cp .env.example .env            
+cp .env.example .env
 npm run dev
 ```
 
@@ -47,20 +54,23 @@ Le frontend démarre sur `http://127.0.0.1:5173` et attend l'API sur l'URL
 définie dans `VITE_API_URL` (par défaut `http://127.0.0.1:5000/api`, le backend
 local). Lancer le backend avant le frontend.
 
-## Identifiants de test
+## Tester!
 
-| Rôle | Email | Mot de passe |
-|---|---|---|
-| Utilisateur standard | a@test.com | Test1234! |
-| Utilisateur standard | b@test.com | Test1234! |
-| Compte marqué administrateur (base de données) | demo@stocksio.fr | Demo1234! |
+Tester l'application :
 
-**Note importante :** le champ `role` (`user` / `admin`) existe dans le modèle
-utilisateur et dans la base fournie, mais aucune route de l'API ne restreint
-encore l'accès en fonction de ce rôle à ce stade du projet — tous les comptes
-ont accès aux mêmes fonctionnalités. Le compte `demo@stocksio.fr` est fourni
-comme identifiant « administrateur » au sens de la donnée, en vue de
-l'évolution du back-office.
+- **Créer son propre compte** : la page d'inscription (`/register`) est
+  fonctionnelle, il suffit d'un email valide et d'un mot de passe d'au moins
+  8 caractères. C'est la meilleure façon de tester le parcours complet
+  (inscription puis connexion) tel qu'un nouvel utilisateur le vivrait.
+
+## Fichier d'exemple pour tester l'import CSV
+
+Le fichier `stocksio_export_produits.csv` (à la racine du dépôt) est un jeu de
+données fictif au format attendu par la fonctionnalité d'import CSV du
+Dashboard (colonnes Nom, Référence, Catégorie, Quantité, Seuil alerte, Unité,
+Entrepôt ID, En alerte). Pour le tester : se connecter, aller sur le
+Dashboard, utiliser le bloc "Importer des produits (CSV)", choisir un
+entrepôt de destination puis sélectionner ce fichier.
 
 ## Identifiants de connexion à la base SQL
 
@@ -88,7 +98,7 @@ les identifiants étant alors ceux fournis par l'hébergeur de la base choisie.
 Le dépôt doit d'abord être poussé sur GitHub (`git push`) : Render et Vercel
 se connectent tous les deux directement à un dépôt Git.
 
-### Backend sur Render.com (avec plan gratuit)
+### Backend sur Render.com avec plan gratuit
 
 1. Créer un compte sur [render.com](https://render.com), puis **New +** →
    **Web Service**, et connecter le dépôt GitHub du projet.
@@ -128,9 +138,9 @@ PostgreSQL).
    - **Output Directory** : `dist`
 3. Variable d'environnement :
    - `VITE_API_URL` : l'URL du backend Render suivie de `/api`, par exemple
-     `https://stocksio-backend.onrender.com/api`
+     `https://.onrender.com/api`
 4. Déployer. Vercel fournit l'URL publique définitive du projet, par exemple
-   `https://stocksio.vercel.app`.
+   `https://stocksio-pi.vercel.app/`.
 
 Chaque nouveau `git push` sur la branche principale redéploie
 automatiquement les deux services.
