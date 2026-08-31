@@ -72,6 +72,8 @@ Entrepôt ID, En alerte). Pour le tester : se connecter, aller sur le
 Dashboard, utiliser le bloc "Importer des produits (CSV)", choisir un
 entrepôt de destination puis sélectionner ce fichier.
 
+Téléchargement du fichier CSV : [stocksio_export_produits.csv](https://drive.google.com/file/d/1Mq_k7YRn67yLnqsD_QxwdDjdoAlojuz8/view?usp=sharing)
+
 ## Identifiants de connexion à la base SQL
 
 La base utilisée en développement et en démonstration est SQLite, une base de
