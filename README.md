@@ -124,7 +124,7 @@ premier appel après une veille prend quelques dizaines de secondes) et son
 disque n'est pas persistant entre deux démarrages : les écritures faites
 pendant une session de démo restent visibles tant que le service tourne,
 mais la base repart de son état d'origine (comptes de test) après une veille
-ou un redéploiement. Suffisant pour une démonstration ou une soutenance ;
+ou un redéploiement. Suffisant pour une démonstration
 pas adapté à une mise en production réelle avec de vraies données à
 conserver (il faudrait alors une vraie base gérée séparément, par exemple
 PostgreSQL).
